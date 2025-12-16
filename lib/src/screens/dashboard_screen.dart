@@ -24,6 +24,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int? _selectedPosition; // 1,2,3
   List<Map<String, dynamic>> _categories = [];
   List<Map<String, dynamic>> _genres = [];
+  int _activeListVersion = 0; // forces _ActiveCategoriesList reload on return
 
   @override
   void initState() {
@@ -145,22 +146,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   spacing: 12,
                   children: [
                     FilledButton.tonalIcon(
-                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GamesCrudScreen())),
+                      onPressed: () async {
+                        await Navigator.push(context, MaterialPageRoute(builder: (_) => const GamesCrudScreen()));
+                        // refresh filters and active list when returning
+                        await _loadFilters();
+                        setState(() { _activeListVersion++; });
+                      },
                       icon: const Icon(Icons.sports_esports),
                       label: const Text('Administrar Jogos'),
                     ),
                     FilledButton.tonalIcon(
-                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoriesCrudScreen())),
+                      onPressed: () async {
+                        await Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoriesCrudScreen()));
+                        await _loadFilters();
+                        setState(() { _activeListVersion++; });
+                      },
                       icon: const Icon(Icons.category),
                       label: const Text('Administrar Categorias'),
                     ),
                     FilledButton.tonalIcon(
-                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryGamesScreen())),
+                      onPressed: () async {
+                        await Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryGamesScreen()));
+                        await _loadFilters();
+                        setState(() { _activeListVersion++; });
+                      },
                       icon: const Icon(Icons.link),
                       label: const Text('Associar Jogos às Categorias'),
                     ),
                     FilledButton.tonalIcon(
-                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GameGenresScreen())),
+                      onPressed: () async {
+                        await Navigator.push(context, MaterialPageRoute(builder: (_) => const GameGenresScreen()));
+                        await _loadFilters();
+                        setState(() { _activeListVersion++; });
+                      },
                       icon: const Icon(Icons.local_offer),
                       label: const Text('Associar Gêneros aos Jogos'),
                     ),
@@ -171,7 +189,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 8),
           Text(isAdmin ? 'Categorias ativas (visualização rápida)' : 'Categorias ativas', style: const TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          const _ActiveCategoriesList(),
+          _ActiveCategoriesList(key: ValueKey(_activeListVersion)),
         ],
       ),
     );
@@ -179,7 +197,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 class _ActiveCategoriesList extends StatefulWidget {
-  const _ActiveCategoriesList();
+  const _ActiveCategoriesList({super.key});
 
   @override
   State<_ActiveCategoriesList> createState() => _ActiveCategoriesListState();

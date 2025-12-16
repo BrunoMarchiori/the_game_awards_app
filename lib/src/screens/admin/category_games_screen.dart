@@ -67,7 +67,16 @@ class _CategoryGamesScreenState extends State<CategoryGamesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Associar Jogos às Categorias')),
+      appBar: AppBar(
+        title: const Text('Associar Jogos às Categorias'),
+        actions: [
+          IconButton(
+            tooltip: 'Atualizar listas',
+            icon: const Icon(Icons.refresh),
+            onPressed: () async { await _loadInitial(); if (_categoryId != null) await _loadAssociations(); },
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

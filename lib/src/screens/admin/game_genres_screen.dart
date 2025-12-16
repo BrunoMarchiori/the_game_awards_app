@@ -67,7 +67,16 @@ class _GameGenresScreenState extends State<GameGenresScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Associar Gêneros aos Jogos')),
+      appBar: AppBar(
+        title: const Text('Associar Gêneros aos Jogos'),
+        actions: [
+          IconButton(
+            tooltip: 'Atualizar listas',
+            icon: const Icon(Icons.refresh),
+            onPressed: () async { await _loadInitial(); if (_gameId != null) await _loadAssociations(); },
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

@@ -54,7 +54,7 @@ class _CategoriesCrudScreenState extends State<CategoriesCrudScreen> {
         ],
       ),
     );
-    if (ok == true) setState(() => _future = _load());
+    if (ok == true) setState(() { _future = _load(); });
   }
 
   Future<void> _delete(int id) async {
@@ -62,7 +62,7 @@ class _CategoriesCrudScreenState extends State<CategoriesCrudScreen> {
     if (ok == true) {
       final db = AppDatabase.instance.db;
       await db.delete('category', where: 'id=?', whereArgs: [id]);
-      setState(() => _future = _load());
+      setState(() { _future = _load(); });
     }
   }
 
