@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../db/db.dart';
+import '../providers/auth_provider.dart';
+import 'user/category_details_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   final int? categoryId;
@@ -22,60 +25,63 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Future<List<Map<String, dynamic>>> _search() async {
     final db = AppDatabase.instance.db;
-
-    // Base: games with optional genre filter
-    final where = <String>[];
+    // Build association-centric list: each entry ties a game to a category it competes in.
     final args = <Object?>[];
+    final filters = <String>[];
+    // Genre filter narrows games via join
     if (widget.genreId != null) {
-      // filter games having genre
-      where.add('g.id IN (SELECT gg.game_id FROM game_genre gg WHERE gg.genre_id = ?)');
+      filters.add('EXISTS (SELECT 1 FROM game_genre gg WHERE gg.game_id = g.id AND gg.genre_id = ?)');
       args.add(widget.genreId);
     }
-    final baseGames = await db.rawQuery('''
-      SELECT g.id, g.name, g.release_date FROM game g
-      ${where.isEmpty ? '' : 'WHERE ' + where.join(' AND ')}
-      ORDER BY g.name
+    // Category filter narrows associations
+    if (widget.categoryId != null) {
+      filters.add('cg.category_id = ?');
+      args.add(widget.categoryId);
+    }
+
+    // Base query: one row per association
+    final rows = await db.rawQuery('''
+      SELECT 
+        cg.id          AS assoc_id,
+        g.id           AS game_id,
+        g.name         AS game_name,
+        g.release_date AS release_date,
+        c.id           AS category_id,
+        c.title        AS category_title,
+        (SELECT COUNT(*) FROM user_vote uv WHERE uv.vote_game_id = cg.id) AS votes
+      FROM category_game cg
+      JOIN game g ON g.id = cg.game_id
+      JOIN category c ON c.id = cg.category_id
+      ${filters.isEmpty ? '' : 'WHERE ' + filters.join(' AND ')}
+      ORDER BY c.title ASC, g.name ASC
     ''', args);
 
-    // If category filter provided, only consider those associated to selected category
-    List<Map<String, dynamic>> games = baseGames;
-    if (widget.categoryId != null) {
-      final ids = await db.rawQuery('SELECT g.id FROM category_game cg JOIN game g ON g.id=cg.game_id WHERE cg.category_id=?', [widget.categoryId]);
-      final idset = ids.map((e) => e['id'] as int).toSet();
-      games = games.where((g) => idset.contains(g['id'] as int)).toList();
-    }
-
-    // If position filter provided (1..3), compute rank within category (or all categories separately) and keep matches
+    // Position filter: keep only N-th by votes within each category (and within genre subset if applied)
     if (widget.position != null) {
-      // Compute per-category top N; if categoryId is null, compute per each category and include matched games
       final pos = widget.position!;
-      final categories = widget.categoryId != null
-          ? await db.query('category', where: 'id=?', whereArgs: [widget.categoryId])
-          : await db.query('category');
-      final gameOk = <int>{};
-      for (final c in categories) {
-        final catId = c['id'] as int;
-        // order games in this category by votes desc
-        final rows = await db.rawQuery('''
-          SELECT g.id, COUNT(uv.id) AS votes
-          FROM category_game cg
-          JOIN game g ON g.id = cg.game_id
-          LEFT JOIN user_vote uv ON uv.vote_game_id = cg.id
-          WHERE cg.category_id = ?
-          GROUP BY g.id
-          ORDER BY votes DESC, g.name ASC
-        ''', [catId]);
-        if (rows.isEmpty) continue;
+      // group rows by category
+      final byCat = <int, List<Map<String, dynamic>>>{};
+      for (final r in rows) {
+        final cid = r['category_id'] as int;
+        (byCat[cid] ??= []).add(r);
+      }
+      final filtered = <Map<String, dynamic>>[];
+      for (final entry in byCat.entries) {
+        entry.value.sort((a,b){
+          final va = (a['votes'] as int?) ?? 0;
+          final vb = (b['votes'] as int?) ?? 0;
+          if (vb != va) return vb.compareTo(va);
+          return (a['game_name'] as String).compareTo(b['game_name'] as String);
+        });
         final idx = pos - 1;
-        if (idx < rows.length) {
-          final gid = rows[idx]['id'] as int;
-          gameOk.add(gid);
+        if (idx < entry.value.length) {
+          filtered.add(entry.value[idx]);
         }
       }
-      games = games.where((g) => gameOk.contains(g['id'] as int)).toList();
+      return filtered;
     }
 
-    return games;
+    return rows;
   }
 
   @override
@@ -91,11 +97,29 @@ class _SearchScreenState extends State<SearchScreen> {
           return ListView.builder(
             itemCount: items.length,
             itemBuilder: (_, i) {
-              final g = items[i];
+              final r = items[i];
+              final title = r['game_name'] as String;
+              final sub = 'Categoria: ${r['category_title']} · Votos: ${r['votes']}';
               return ListTile(
                 leading: const Icon(Icons.sports_esports),
-                title: Text(g['name'] as String),
-                subtitle: Text('Lançamento: ${g['release_date']}'),
+                title: Text(title),
+                subtitle: Text(sub),
+                onTap: () {
+                  final auth = context.read<AuthProvider>();
+                  final isCommonUser = auth.isLogged && auth.user!.role == 1;
+                  if (isCommonUser) {
+                    // Fetch category map to navigate
+                    final cat = {
+                      'id': r['category_id'],
+                      'title': r['category_title'],
+                      'description': '',
+                      'date': '',
+                    };
+                    Navigator.push(context, MaterialPageRoute(
+                      builder: (_) => CategoryDetailsScreen(category: cat as Map<String, dynamic>),
+                    ));
+                  }
+                },
               );
             },
           );

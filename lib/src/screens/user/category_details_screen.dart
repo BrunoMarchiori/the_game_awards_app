@@ -60,7 +60,7 @@ class _CategoryDetailsScreenState extends State<CategoryDetailsScreen> {
         await db.update('user_vote', {'vote_game_id': assocId}, where: 'id=?', whereArgs: [existing.first['id']]);
       }
     }
-    setState(() => _future = _load());
+    setState(() { _future = _load(); });
   }
 
   @override

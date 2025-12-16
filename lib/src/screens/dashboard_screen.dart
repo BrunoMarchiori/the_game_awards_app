@@ -7,7 +7,9 @@ import 'admin/categories_crud_screen.dart';
 import 'admin/games_crud_screen.dart';
 import 'admin/category_games_screen.dart';
 import 'user/category_list_screen.dart';
+import 'user/category_details_screen.dart';
 import 'search_screen.dart';
+import 'admin/game_genres_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -77,6 +79,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   onChanged: (v) => setState(() => _selectedCategoryId = v),
                 ),
               ),
+              IconButton(
+                tooltip: 'Limpar categoria',
+                onPressed: () => setState(() => _selectedCategoryId = null),
+                icon: const Icon(Icons.clear),
+              ),
               SizedBox(
                 width: 220,
                 child: DropdownButtonFormField<int>(
@@ -89,6 +96,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   value: _selectedGenreId,
                   onChanged: (v) => setState(() => _selectedGenreId = v),
                 ),
+              ),
+              IconButton(
+                tooltip: 'Limpar gênero',
+                onPressed: () => setState(() => _selectedGenreId = null),
+                icon: const Icon(Icons.clear),
               ),
               SizedBox(
                 width: 220,
@@ -103,6 +115,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   value: _selectedPosition,
                   onChanged: (v) => setState(() => _selectedPosition = v),
                 ),
+              ),
+              IconButton(
+                tooltip: 'Limpar posição',
+                onPressed: () => setState(() => _selectedPosition = null),
+                icon: const Icon(Icons.clear),
               ),
               FilledButton.icon(
                 onPressed: () {
@@ -141,6 +158,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoryGamesScreen())),
                       icon: const Icon(Icons.link),
                       label: const Text('Associar Jogos às Categorias'),
+                    ),
+                    FilledButton.tonalIcon(
+                      onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GameGenresScreen())),
+                      icon: const Icon(Icons.local_offer),
+                      label: const Text('Associar Gêneros aos Jogos'),
                     ),
                   ],
                 ),
@@ -208,7 +230,7 @@ class _ActiveCategoriesListState extends State<_ActiveCategoriesList> {
             subtitle: Text(c['description']?.toString() ?? ''),
             trailing: Text(c['date'] as String),
             onTap: () => Navigator.push(context, MaterialPageRoute(
-              builder: (_) => CategoryListScreen(openCategoryId: c['id'] as int),
+              builder: (_) => CategoryDetailsScreen(category: c),
             )),
           )).toList(),
         );
